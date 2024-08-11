@@ -1,15 +1,11 @@
 import os
-import io
-import matplotlib.pyplot as plt
 from datetime import datetime
 import pandas as pd
-from sqlalchemy import create_engine, and_, not_
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
-import psycopg2
 from fastapi import HTTPException
 from app.utils.models import Finance
-from psycopg2 import sql
 
 DATABASE_URL = os.getenv('DATABASE_URL')
 

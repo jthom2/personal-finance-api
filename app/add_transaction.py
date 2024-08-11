@@ -18,19 +18,6 @@ class Category(str, Enum):
     expense = 'Expense'
     income = 'Income'
 
-# @router.post('/add')
-# async def add_entry(
-#     date: str = datetime.now().strftime('%m-%d-%Y'),
-#     amount: float = None,
-#     category: Category = Category.expense,
-#     description: str = None,
-#     current_user: User = Depends(get_current_user)
-# ):
-#     if not amount:
-#         raise HTTPException(status_code=400, detail="Amount is required.")
-#     FinanceData.add_entry(current_user.id, date, amount, category.value, description)
-#     return {"message": "Entry added successfully"}
-
 
 @router.post('/add')
 def add_entry(
