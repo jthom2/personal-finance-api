@@ -4,6 +4,8 @@ from app.finance_class import FinanceData
 from datetime import datetime
 from app.utils.models import User
 from enum import Enum
+from app.utils.database import get_db
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -15,9 +17,13 @@ async def get_transactions(
     end_date: str = '12-31-2099',
     exclude_income: bool = False,
     exclude_expenses: bool = False,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    transactions = FinanceData.get_transactions(
-        start_date, end_date, user_id=current_user.id, exclude_income=exclude_income, exclude_expenses=exclude_expenses
-    )
-    return transactions
+    try:
+        transactions = FinanceData.get_transactions(
+            db, start_date, end_date, user_id=current_user.id, exclude_income=exclude_income, exclude_expenses=exclude_expenses
+        )
+        return transactions
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

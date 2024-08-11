@@ -3,7 +3,12 @@ import io
 import matplotlib.pyplot as plt
 from datetime import datetime
 import pandas as pd
+from sqlalchemy import create_engine, and_, not_
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 import psycopg2
+from fastapi import HTTPException
+from app.utils.models import Finance
 from psycopg2 import sql
 
 DATABASE_URL = os.getenv('DATABASE_URL')
@@ -13,53 +18,41 @@ class FinanceData:
     DATE_FORMAT = '%m-%d-%Y'
 
     @classmethod
-    def connect_db(cls):
-        return psycopg2.connect(DATABASE_URL)
-
-    @classmethod
-    def add_entry(cls, user_id, date, amount, category, description):
-        conn = cls.connect_db()
-        cur = conn.cursor()
+    def get_transactions(cls, db: Session, start_date: str, end_date: str, user_id: int, exclude_income: bool = False, exclude_expenses: bool = False):
         try:
-            cur.execute(
-                sql.SQL("""
-                    INSERT INTO finance_data (user_id, date, amount, category, description)
-                    VALUES (%s, %s, %s, %s, %s)
-                """),
-                [user_id, date, amount, category, description]
+            start_date_obj = datetime.strptime(start_date, cls.DATE_FORMAT).date()
+            end_date_obj = datetime.strptime(end_date, cls.DATE_FORMAT).date()
+
+            # Use the Finance model in the query
+            query = db.query(Finance).filter(
+                and_(
+                    Finance.date >= start_date_obj,
+                    Finance.date <= end_date_obj,
+                    Finance.user_id == user_id
+                )
             )
-            conn.commit()
-        finally:
-            cur.close()
-            conn.close()
 
-
-    @classmethod
-    def get_transactions(cls, start_date, end_date, user_id, exclude_income=False, exclude_expenses=False):
-        conn = cls.connect_db()
-        cur = conn.cursor()
-        try:
-            query = sql.SQL("""
-                SELECT date, amount, category, description 
-                FROM {table} 
-                WHERE date >= %s AND date <= %s AND user_id = %s
-            """)
-            conditions = [start_date, end_date, user_id]
-
+            # Apply additional filters based on the flags
             if exclude_income:
-                query += sql.SQL(" AND category != 'Income'")
+                query = query.filter(Finance.category != 'Income')
             if exclude_expenses:
-                query += sql.SQL(" AND category != 'Expense'")
+                query = query.filter(Finance.category != 'Expense')
 
-            cur.execute(query.format(table=sql.Identifier(cls.TABLE_NAME)), conditions)
-            rows = cur.fetchall()
+            # Execute the query and fetch the results
+            results = query.all()
 
-            df = pd.DataFrame(rows, columns=['date', 'amount', 'category', 'description'])
+            # Convert the results to a DataFrame for easy manipulation
+            df = pd.DataFrame([{
+                'date': r.date,
+                'amount': r.amount,
+                'category': r.category,
+                'description': r.description
+            } for r in results])
+
+            # Ensure the 'date' column is in the correct format
             df['date'] = pd.to_datetime(df['date'], format=cls.DATE_FORMAT)
 
+            # Return the results as a list of dictionaries
             return df.to_dict(orient='records')
-        except Exception as e:
-            print(f'Error: Unable to retrieve transactions from database: {e}')
-        finally:
-            cur.close()
-            conn.close()
+        except SQLAlchemyError as e:
+            raise HTTPException(status_code=500, detail=str(e))
