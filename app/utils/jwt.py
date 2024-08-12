@@ -1,6 +1,6 @@
 import os
-import jwt
 from sqlalchemy.orm import Session
+import jwt
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi import Depends, HTTPException
 from dotenv import load_dotenv

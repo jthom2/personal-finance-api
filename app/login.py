@@ -7,10 +7,9 @@ from app.utils.jwt import create_access_token
 from app.utils.pwd import verify_password
 from pydantic import BaseModel, EmailStr, constr, validator
 
+
 router = APIRouter()
 
-
-from pydantic import constr
 
 class LoginRequest(BaseModel):
     email: EmailStr 
